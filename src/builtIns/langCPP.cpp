@@ -110,6 +110,12 @@ class Dynamic
   Dynamic operator+ (std::string x) {
     if (type == STRING) {
       return Dynamic(str + x);
+    } else if (type == INT) {
+      return Dynamic(std::to_string(num) + x);
+    } else if (type == DOUBLE) {
+      return Dynamic(std::to_string(flt) + x);
+    } else if (type == BOOL) {
+      return Dynamic((bln ? "True" : "False") + x);
     }
     
     return (*this);
@@ -599,8 +605,13 @@ inline std::ostream& operator<< (std::ostream& out, const Dynamic& dynamic) {
   } else if (type == dynamic.DOUBLE) {
     out << dynamic.flt;
   } else if (type == dynamic.BOOL) {
-    out << dynamic.bln;
+    out << (dynamic.bln ? "True" : "False");
   }
 
   return out;
 };
+
+inline std::string operator+ (bool bln, const std::string& str) {
+  std::string blnstr = (bln ? "True" : "False");
+  return blnstr + str;
+}

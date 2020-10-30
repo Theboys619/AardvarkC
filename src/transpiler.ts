@@ -91,9 +91,13 @@ export default class Transpiler {
       return code;
     }
 
+    function fixEscapes(str: string) {
+      return str.replace(/\\(n|r|U|033|u|t|l|x)/g, "$1");
+    }
+
     function createType(exp: any, spacing?: Prettier) {
       if (exp.type == "String")
-        return "std::string(" + JSON.stringify(exp.value) + ")";
+        return "std::string(" + fixEscapes(JSON.stringify(exp.value)) + ")";
       return JSON.stringify(exp.value);
     }
 

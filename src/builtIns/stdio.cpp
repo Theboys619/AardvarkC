@@ -12,6 +12,18 @@ void output(std::string msg) {
   std::cout << msg;
 }
 
+void output(bool msg) {
+  std::string boolean = "False";
+
+  if (msg) boolean = "True";
+
+  std::cout << boolean;
+}
+
+void output(int msg) {
+  std::cout << msg;
+}
+
 template<typename T, typename ... Args>
 void output(T arg, Args ...args) {
   std::cout << arg;
