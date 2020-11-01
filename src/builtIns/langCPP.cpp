@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 
 class Dynamic
 {
@@ -34,6 +35,23 @@ class Dynamic
       ReadFile.close();
 
       return text;
+    }
+
+    template<typename T>
+    void append(T str) {
+      std::ofstream WriteFile;
+      WriteFile.open(filename, std::ios::out | std::ios::app);
+      WriteFile << str;
+
+      WriteFile.close();
+    }
+
+    template<typename T>
+    void write(T str) {
+      std::ofstream WriteFile(filename);
+      WriteFile << str;
+
+      WriteFile.close();
     }
   };
 
@@ -690,6 +708,16 @@ class Dynamic
   std::string read() {
     return adkfile.read();
   };
+
+  template<typename T>
+  void append(T str) {
+    adkfile.append(str);
+  }
+
+  template<typename T>
+  void write(T str) {
+    adkfile.write(str);
+  }
 
   void close() {
     free(&adkfile);
