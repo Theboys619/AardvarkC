@@ -6,7 +6,7 @@ import * as fs from "https://deno.land/std@0.69.0/fs/mod.ts";
 import * as Path from "https://deno.land/std@0.63.0/path/mod.ts";
 
 import { isOfAny } from "./mods/reduce.ts";
-import { resolve } from "./mods/fs.ts";
+import { readFile, resolve } from "./mods/fs.ts";
 
 const { os } = Deno.build;
 
@@ -134,7 +134,7 @@ export default class Parser { // Modify the parser as you please
 	}
 
 	defineModule(filepath: string, filename: string) {
-		this.libs[filename] = {
+		this.libs[filename.replace(/\..+$/, "")] = {
 			filename,
 			filepath
 		}
@@ -142,7 +142,12 @@ export default class Parser { // Modify the parser as you please
   
   defineModules(filenames: string[]) {
     for (const filename of filenames) {
-      const path = resolve(`./builtIns/${filename}`);
+			const path = resolve(`./modules/${filename}`);
+			
+			this.libs[filename.replace(/\..+$/, "")] = {
+				filename,
+				filepath: path
+			};
     }
   }
 
@@ -398,12 +403,17 @@ export default class Parser { // Modify the parser as you please
     this.advance(); // advance over the identifier
     
     const funcCall = new Statement("FunctionCall");
-    const args = this.pDelimiters("(", ")", ",", this.pExpression);
-
-    funcCall.value = {
+		const args = this.pDelimiters("(", ")", ",", this.pExpression);
+		
+		funcCall.value = {
       name: functionName,
       args
     };
+
+		if (this.isDelimiter(".")) {
+			this.advance();
+			funcCall.value.dotOp = this.pExpression();
+		}
 
     return funcCall;
 	}
@@ -416,17 +426,66 @@ export default class Parser { // Modify the parser as you please
 	// 	// TODO
 	// }
 
-	pImport() {
+	pInclude(value: string, dirToken: Token): Statement {
+		const builtinMod = this.libs.hasOwnProperty(value);
+		const decoder =  new TextDecoder("utf-8");
+
+		let file = !value.includes(".adk") ? value + ".adk" : value;
+		let filepath = Path.resolve(file);
+
+		if (builtinMod) {
+			const { filename: bifilename, filepath: bifilepath } = this.libs[value];
+			const isCPP = bifilepath.endsWith(".cpp");
+
+			if (isCPP) {
+				this.advance();
+				const stmt = new Statement("CPPSnippet", decoder.decode(Deno.readFileSync(bifilepath)));
+				//TODO
+				return stmt;
+			}
+
+			file = bifilename;
+			filepath = bifilepath;
+		}
+
+		const data = decoder.decode(Deno.readFileSync(filepath));
+
+		const lexer = new Lexer(data, filepath, this.grammar);
+		const newtokens = lexer.tokenize();
+		newtokens.splice(newtokens.length - 1, 1); // Remove EOF Token
+
+		this.tokens.splice(this.pos, 1); // Remove directive
+		this.tokens.splice(this.pos, 0, ...newtokens);
+
+		this.curTok = this.tokens[this.pos];
+
 		// TODO
+
+		return this.pAll();
+	}
+
+	pDirective() {
+		const directiveTok = this.curTok;
+		const { value } = directiveTok;
+		const lineInfo = this.lines[directiveTok.line - 1];
+
+		if (!value.includes(" ")) new ADKSyntaxError("Expected a space after directive!" + `\n${lineInfo}`);
+
+		const directive: string = value.trim().split(" ")[0];
+		const dirValue: string  = value.trim().split(" ")[1];
+		
+		if (directive == "include") return this.pInclude(dirValue, directiveTok);
+
+		new ADKSyntaxError("JUST FOR TESTING" + `\n${lineInfo}`);
 	}
 
 	pSnippet(): Statement {
 		let snippetType = "CPPSnippet";
 
-		const JSSnippet = new Statement(snippetType, this.curTok);
+		const CPPSnippet = new Statement(snippetType, this.curTok);
 		this.advance();
 
-		return JSSnippet;
+		return CPPSnippet;
 	}
 
 	pFunction(): Statement {
@@ -504,6 +563,9 @@ export default class Parser { // Modify the parser as you please
 				return expr;
 			}
 
+			if (this.isCustom("Directive"))
+				return this.pDirective();
+
 			if (this.isKeyword("if"))
 				return this.pIf();
 
@@ -528,7 +590,16 @@ export default class Parser { // Modify the parser as you please
 				if (!this.isDelimiter("(", this.peek()))
 					this.advance();
 
-				return oldTok;
+				const Identifier: { [x: string]: any } = {
+					...oldTok,
+				}
+
+				if (this.isDelimiter(".")) {
+					this.advance();
+					Identifier.dotOp = this.pExpression();
+				}
+
+				return Identifier;
 			}
 
 			if (this.isIgnore()) {

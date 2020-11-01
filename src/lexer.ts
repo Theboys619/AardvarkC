@@ -80,7 +80,9 @@ export default class Lexer {
 		return this.grammar.Delimiters.includes(char);
 	}
 
-	isSpecial(char = this.char) {
+	isSpecial(special?: string, char = this.char) {
+		if (special)
+			return this.grammar.Special.includes(special) && (char == special);
 		return this.grammar.Special.includes(char);
 	}
 
@@ -195,6 +197,26 @@ export default class Lexer {
 				}
 
 				this.advance(lengthEnd);
+			}
+
+			if (this.isSpecial("#")) {
+				let value = "";
+				const index = this.index;
+				const line = this.line;
+				value += this.advance();
+
+				while (this.char !== undefined && !this.isLinebreak()) {
+					const char = this.advance();
+					if (char !== undefined && !this.isLinebreak())
+						value += char;
+				}
+
+				this.tokens.push({
+					type: "Directive",
+					value,
+					index,
+					line
+				});
 			}
 
 			if (this.isOperator()) {

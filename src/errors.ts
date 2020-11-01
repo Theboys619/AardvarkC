@@ -34,6 +34,6 @@ const Warning = (errorname: string) => class extends ADKError {
 	}
 };
 
-export const ADKSyntaxError = Warning("ADKSnytaxError");
+export const ADKSyntaxError = Warning("ADKSyntaxError");
 export const ADKInvalidCharacter = Warning("ADKInvalidCharacter");
 export const ADKFileNotFound = Warning("ADKFileNotFound");

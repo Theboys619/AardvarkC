@@ -4,7 +4,7 @@ import { LexerGrammar } from "./src/types.ts";
 
 // Custom Modules
 import formatArgs, { Args } from "./src/mods/args.ts";
-import { readFile, writeFile } from "./src/mods/fs.ts";
+import { readFile, writeFile, resolve } from "./src/mods/fs.ts";
 
 import { ADKFileNotFound } from "./src/errors.ts";
 import Lexer from "./src/lexer.ts";
@@ -59,11 +59,15 @@ async function runFile(args: Args, fileName: string) {
     console.log(tokens);
 
   const parser = new Parser(lexer);
-  // parser.defineModules(["stdio.adk"]);
+  for await (const dirEntry of Deno.readDir(resolve("./src/modules"))) {
+    if (dirEntry.isFile) {
+      parser.defineModule(resolve(`./src/modules/${dirEntry.name}`), dirEntry.name);
+    }
+  }
 
   const ast = parser.parse();
 
-  if (debug > 0)
+  if (debug > 1)
     console.log(ast.block);
 
   const transpiler = new Transpiler(parser);
@@ -71,7 +75,7 @@ async function runFile(args: Args, fileName: string) {
 
   const code = transpiler.transpile();
 
-  if (debug > 0)
+  if (debug > 2)
     console.log(code);
 
   await writeFile(Path.resolve(`./${fileNoExt}.cpp`), code);

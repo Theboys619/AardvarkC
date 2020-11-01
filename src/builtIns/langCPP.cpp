@@ -1,15 +1,50 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 
 class Dynamic
 {
   public:
 
+  // File Type //
+
+  class ADKFile {
+    public:
+
+    std::string filename;
+
+    ADKFile() {};
+    ADKFile(const char* str)
+      : filename(std::string(str))
+    {};
+
+    ADKFile(std::string str)
+      : filename(str)
+    {};
+
+    std::string read() {
+      std::string line;
+      std::string text = "";
+      std::ifstream ReadFile(filename);
+
+      while (std::getline(ReadFile, line)) {
+        text += line + "\n";
+      };
+
+      ReadFile.close();
+
+      return text;
+    }
+  };
+
+  // Other Types //
+
   enum TYPES {
     STRING,
     INT,
     DOUBLE,
-    BOOL
+    BOOL,
+    FILE
   } type;
 
   std::string str;
@@ -17,9 +52,15 @@ class Dynamic
   double flt;
   bool bln;
 
+  Dynamic(const Dynamic& x) {
+    type = x.type;
+    str = x.str;
+    num = x.num;
+    bln = x.bln;
+    flt = x.flt;
+  };
   Dynamic(const char* x) {
     type = STRING;
-
     str = x;
   };
   Dynamic(std::string x) {
@@ -593,6 +634,65 @@ class Dynamic
   }
   friend bool operator== (bool x, Dynamic y) {
     return y == x;
+  }
+
+  std::string getString() {
+    return str;
+  }
+
+  int getInt() {
+    return num;
+  }
+
+  double getDouble() {
+    return flt;
+  }
+
+  bool getBoolean() {
+    return bln;
+  }
+
+  // Other Dynamic Types //
+
+  ADKFile adkfile;
+
+  Dynamic(std::string ctype, const char* value) {
+    construct(ctype, value);
+  }
+  Dynamic(std::string ctype, std::string value) {
+    construct(ctype, value);
+  }
+
+  void construct(const char* ctype, const char* value) {
+    if (std::string(ctype) == std::string("FILE")) {
+      adkfile = ADKFile(value);
+      type = FILE;
+    }
+  }
+  void construct(std::string ctype, std::string value) {
+    construct(ctype.c_str(), value.c_str());
+  }
+  void construct(std::string ctype, const char* value) {
+    construct(ctype.c_str(), value);
+  }
+  void construct(std::string ctype, Dynamic value) {
+    construct(ctype.c_str(), value.getString());
+  }
+  void construct(Dynamic ctype, const char* value) {
+    construct(ctype.getString(), value);
+  }
+  void construct(Dynamic ctype, Dynamic value) {
+    construct(ctype.getString(), value.getString());
+  }
+
+  // File System //
+
+  std::string read() {
+    return adkfile.read();
+  };
+
+  void close() {
+    free(&adkfile);
   }
 };
 

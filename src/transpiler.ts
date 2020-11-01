@@ -115,8 +115,8 @@ export default class Transpiler {
       return code;
     }
 
-    function createIdentifier(exp: Token, spacing?: Prettier): string {
-      return exp.value;
+    function createIdentifier(exp: { [x: string]: any }, spacing?: Prettier): string {
+      return (exp.dotOp ? `${exp.value}.${CPP(exp.dotOp, new Prettier(2, 0))}` : exp.value);
     }
 
     function createAssign(exp: Expression, spacing?: Prettier): string {
@@ -141,11 +141,19 @@ export default class Transpiler {
     function createFuncCall(exp: Statement, spacing?: Prettier): string {
       const { name, args } = exp.value;
 
-      return `${name.value}(${args.map((value: string, index: number, array: any[]) => CPP(array[index], spacing)).join(", ")})`;
+      return `${name.value}(${args.map((value: string, index: number, array: any[]) => CPP(array[index], spacing)).join(", ")})${
+        (exp.value.dotOp)
+          ? "." + CPP(exp.value.dotOp, new Prettier(2, 0))
+          : ""}`;
     }
 
     function createReturn(exp: Statement, spacing?: Prettier): string {
       return `return ${CPP(exp.value, spacing)}`;
+    }
+
+    function createSnippet(exp: Statement, spacing?: Prettier): string {
+      functions[`SNIPPET_${functions.length}`] = exp.value;
+      return "";
     }
 
     function CPP(exp: any, spacing?: any): string {
@@ -186,6 +194,9 @@ export default class Transpiler {
   
         case "If":
           return createIf(exp, spacing);
+        
+        case "CPPSnippet":
+          return createSnippet(exp, spacing);
   
         // case "AccessProp":
         //   // TODO
